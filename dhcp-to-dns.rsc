@@ -1,7 +1,7 @@
 :local dnsttl "1d 00:00:00";
-:local faceUrl "http://10.2.240.1/rest/ip/dns/static";
-:local faceUser "dnssync";
-:local facePass "wMkVNH7gnzIbAvYwsPJzuc9A3UL4JS7P";
+:local faceUrl "https://CHANGE_ME/rest/ip/dns/static";
+:local faceUser "CHANGE_ME";
+:local facePass "CHANGE_ME";
 
 # "a.b.c.d" -> "a-b-c-d"
 :local ip2Host do={
