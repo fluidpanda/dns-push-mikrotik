@@ -1,7 +1,7 @@
 :local dnsttl "1d 00:00:00";
-:local faceUrl "https://CHANGE_ME/rest/ip/dns/static";
-:local faceUser "CHANGE_ME";
-:local facePass "CHANGE_ME";
+:local faceUrl "http://10.2.240.1/rest/ip/dns/static";
+:local faceUser "dnssync";
+:local facePass "wMkVNH7gnzIbAvYwsPJzuc9A3UL4JS7P";
 
 # "a.b.c.d" -> "a-b-c-d"
 :local ip2Host do={
@@ -52,8 +52,8 @@
 :local faceAdd do={
     # params: url, user, pass, fqdn, ip, ttl, token
     :do {
-        /tool/fetch url=$url http-method=post check-certificate=no \
-            http-header-field="Content-Type: application/json" \
+        /tool/fetch url=$url http-method=put check-certificate=no \
+            http-header-field="Content-Type:application/json" \
             http-data="{\"name\":\"$fqdn\",\"address\":\"$ip\",\"ttl\":\"$ttl\",\"comment\":\"$token\"}" \
             user=$user password=$pass output=none;
     } on-error={ :log warning "face DNS add failed: $fqdn" }
