@@ -108,13 +108,21 @@
 
     :if ([/ip dhcp-server lease get [:pick [find mac-address=$leaseActMAC and server=$leaseServerName] 0] ]) do={
         # :log info message="$LogPrefix: $leaseActMAC -> $hostname"
+        /ip dns static remove [find comment=$token];
         :do {
             /ip dns static add address=$leaseActIP name=$fqdn ttl=$dnsttl comment=$token;
+            $faceRemove url=$faceUrl user=$faceUser pass=$facePass token=$token;
             $faceAdd url=$faceUrl user=$faceUser pass=$facePass fqdn=$fqdn ip=$leaseActIP ttl=$dnsttl token=$token;
-        } on-error={:log error message="$LogPrefix: Failure during dns registration of $fqdn with $leaseActIP"}
+        } on-error={
+            :log error message="$LogPrefix: Failure during dns registration of $fqdn with $leaseActIP"
+        }
     }
 } else={
-    # DHCP lease removed
-    /ip dns static remove [find comment=$token];
-    $faceRemove url=$faceUrl user=$faceUser pass=$facePass token=$token;
+    :local stillBound [/ip dhcp-server lease find mac-address=$leaseActMAC status=bound server=$leaseServerName]
+    :if ([:len $stillBound] = 0) do={
+        /ip dns static remove [find comment=$token];
+        $faceRemove url=$faceUrl user=$faceUser pass=$facePass token=$token;
+    } else={
+        :log info "$LogPrefix: skipping DNS removal, $leaseActMAC still has active lease"
+    }
 }
