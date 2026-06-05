@@ -1,4 +1,7 @@
 :local dnsttl "1d 00:00:00";
+:local faceUrl "https://CHANGE_ME/rest/ip/dns/static";
+:local faceUser "CHANGE_ME";
+:local facePass "CHANGE_ME";
 
 # "a.b.c.d" -> "a-b-c-d"
 :local ip2Host do={
@@ -46,6 +49,29 @@
     :return $result;
 }
 
+:local faceAdd do={
+    # params: url, user, pass, fqdn, ip, ttl, token
+    :do {
+        /tool/fetch url=$url http-method=post check-certificate=no \
+            http-header-field="Content-Type: application/json" \
+            http-data="{\"name\":\"$fqdn\",\"address\":\"$ip\",\"ttl\":\"$ttl\",\"comment\":\"$token\"}" \
+            user=$user password=$pass output=none;
+    } on-error={ :log warning "face DNS add failed: $fqdn" }
+}
+
+:local faceRemove do={
+    # params: url, user, pass, token
+    :do {
+        :local res [/tool/fetch url="$url?comment=$token" http-method=get \
+            user=$user password=$pass check-certificate=no output=user as-value];
+        :foreach row in=[:deserialize ($res->"data") from=json] do={
+            :local id ($row->".id");
+            /tool/fetch url="$url/$id" http-method=delete \
+                user=$user password=$pass check-certificate=no output=none;
+        }
+    } on-error={ :log warning "face DNS remove failed: $token" }
+}
+
 :local token "$leaseServerName-$leaseActMAC";
 :local LogPrefix "script ($leaseServerName)"
 
@@ -56,9 +82,8 @@
 
 :if ( $leaseBound = 1 ) do={
     # new DHCP lease added
-    /ip dhcp-server
+    /ip dhcp-server network
     #:local dnsttl [ get [ find name=$leaseServerName ] lease-time ]
-    network
     :local domain [ get [ find $leaseActIP in address ] domain ]
     #:log info "$LogPrefix: DNS domain is $domain"
 
@@ -87,9 +112,11 @@
         # :log info message="$LogPrefix: $leaseActMAC -> $hostname"
         :do {
             /ip dns static add address=$leaseActIP name=$fqdn ttl=$dnsttl comment=$token;
+            $faceAdd url=$faceUrl user=$faceUser pass=$facePass fqdn=$fqdn ip=$leaseActIP ttl=$dnsttl token=$token;
         } on-error={:log error message="$LogPrefix: Failure during dns registration of $fqdn with $leaseActIP"}
     }
 } else={
     # DHCP lease removed
     /ip dns static remove [find comment=$token];
+    $faceRemove url=$faceUrl user=$faceUser pass=$facePass token=$token;
 }
