@@ -6,11 +6,9 @@
 # "a.b.c.d" -> "a-b-c-d"
 :local ip2Host do={
     :local outStr
-    :for i from=0 to=([:len $inStr] - 1) do=\
-        {
+    :for i from=0 to=([:len $inStr] - 1) do={
         :local tmp [:pick $inStr $i];
-        :if ($tmp =".") do=\
-        {
+        :if ($tmp =".") do={
             :set tmp "-"
         }
         :set outStr ($outStr . $tmp)
