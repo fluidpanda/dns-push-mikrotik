@@ -1,4 +1,4 @@
-:local domain ".remote.idlehive"
+:local domain ".CHANGE_ME"
 :local prefix "ike-"
 
 :foreach lease in=[/ip/pool/used/find where owner="IPsec"] do={
