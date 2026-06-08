@@ -41,7 +41,9 @@
     :for i from=0 to=([:len $entry] - 1) do={
         :local char [:pick $entry $i];
         :local pos [:find $upper $char];
-        :if ($pos > -1) do={:set char [:pick $lower $pos]};
+        :if ($pos > -1) do={
+            :set char [:pick $lower $pos]
+        };
         :set result ($result . $char);
     }
     :return $result;
@@ -54,7 +56,9 @@
             http-header-field="Content-Type:application/json" \
             http-data="{\"name\":\"$fqdn\",\"address\":\"$ip\",\"ttl\":\"$ttl\",\"comment\":\"$token\"}" \
             user=$user password=$pass output=none;
-    } on-error={ :log warning "face DNS add failed: $fqdn" }
+    } on-error={
+        :log warning "face DNS add failed: $fqdn"
+    }
 }
 
 :local faceRemove do={
@@ -67,7 +71,9 @@
             /tool/fetch url="$url/$id" http-method=delete \
                 user=$user password=$pass check-certificate=no output=none;
         }
-    } on-error={ :log warning "face DNS remove failed: $token" }
+    } on-error={
+        :log warning "face DNS remove failed: $token"
+    }
 }
 
 :local token "$leaseServerName-$leaseActMAC";
