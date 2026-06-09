@@ -22,12 +22,16 @@
 :local mapHostName do={
     :local allowedChars "abcdefghijklmnopqrstuvwxyz0123456789-";
     :local numChars [:len $name];
-    :if ($numChars > 63) do={:set numChars 63};
+    :if ($numChars > 63) do={
+        :set numChars 63
+    };
     :local result "";
 
     :for i from=0 to=($numChars - 1) do={
         :local char [:pick $name $i];
-        :if ([:find $allowedChars $char] < 0) do={:set char "-"};
+        :if ([:find $allowedChars $char] < 0) do={
+            :set char "-"
+        };
         :set result ($result . $char);
     }
     :return $result;
@@ -70,7 +74,7 @@
             :local id ($row->".id");
             /tool/fetch url="$url/$id" http-method=delete \
                 user=$user password=$pass check-certificate=no output=none;
-        }
+            }
     } on-error={
         :log warning "face DNS remove failed: $token"
     }
@@ -79,7 +83,7 @@
 :local token "$leaseServerName-$leaseActMAC";
 :local LogPrefix "script ($leaseServerName)"
 
-:if ( [ :len $leaseActIP ] <= 0 ) do={
+:if ([:len $leaseActIP] <= 0) do={
     :log error "$LogPrefix: empty lease address"
     :error "empty lease address"
 }
@@ -87,16 +91,16 @@
 :if ( $leaseBound = 1 ) do={
     # new DHCP lease added
     /ip dhcp-server network
-    #:local dnsttl [ get [ find name=$leaseServerName ] lease-time ]
-    :local domain [ get [ find $leaseActIP in address ] domain ]
+    #:local dnsttl [get [find name=$leaseServerName ] lease-time]
+    :local domain [get [find $leaseActIP in address ] domain]
     #:log info "$LogPrefix: DNS domain is $domain"
 
     :local hostname [/ip dhcp-server lease get [:pick [find mac-address=$leaseActMAC and server=$leaseServerName] 0] value-name=host-name]
     #:log info "$LogPrefix: DHCP hostname is $hostname"
 
     #Hostname cleanup
-    :if ( [ :len $hostname ] <= 0 ) do={
-        :set hostname [ $ip2Host inStr=$leaseActIP ]
+    :if ([:len $hostname] <= 0) do={
+        :set hostname [$ip2Host inStr=$leaseActIP]
         :log info "$LogPrefix: Empty hostname for '$leaseActIP', using generated host name '$hostname'"
     }
 
@@ -104,7 +108,7 @@
     :set hostname [$mapHostName name=$hostname]
     #:log info "$LogPrefix: Clean hostname for FQDN is $hostname";
 
-    :if ( [ :len $domain ] <= 0 ) do={
+    :if ([:len $domain] <= 0) do={
         :log warning "$LogPrefix: Empty domainname for '$leaseActIP', cannot create static DNS name"
         :error "Empty domainname for '$leaseActIP'"
     }
@@ -112,7 +116,7 @@
     :local fqdn ($hostname . "." .  $domain)
     #:log info "$LogPrefix: FQDN for DNS is $fqdn"
 
-    :if ([/ip dhcp-server lease get [:pick [find mac-address=$leaseActMAC and server=$leaseServerName] 0] ]) do={
+    :if ([/ip dhcp-server lease get [:pick [find mac-address=$leaseActMAC and server=$leaseServerName] 0]]) do={
         # :log info message="$LogPrefix: $leaseActMAC -> $hostname"
         /ip dns static remove [find comment=$token];
         :do {
