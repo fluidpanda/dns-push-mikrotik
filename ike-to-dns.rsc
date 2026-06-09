@@ -30,5 +30,6 @@
     :if ([:len $active] = 0) do={
         :local recFqdn [/ip/dns/static/get $rec name]
         /ip/dns/static/remove $rec
+        :log info ("removed: " . $recFqdn)
     }
 }

@@ -22,6 +22,7 @@
     } else={
         :if ([:len $existing] > 0) do={
             /ip/dns/static/remove $existing
+            :log info ("removed: " . $fqdn)
         }
     }
 }
