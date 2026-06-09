@@ -49,8 +49,8 @@
     :return $result;
 }
 
+# params: url, user, pass, fqdn, ip, ttl, token
 :local faceAdd do={
-    # params: url, user, pass, fqdn, ip, ttl, token
     :do {
         /tool/fetch url=$url http-method=put check-certificate=no \
             http-header-field="Content-Type:application/json" \
@@ -61,8 +61,8 @@
     }
 }
 
+# params: url, user, pass, token
 :local faceRemove do={
-    # params: url, user, pass, token
     :do {
         :local res [/tool/fetch url="$url?comment=$token" http-method=get \
             user=$user password=$pass check-certificate=no output=user as-value];
