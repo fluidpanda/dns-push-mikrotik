@@ -96,6 +96,52 @@ The peer IP is extracted from `allowed-address` (strips the `/32` prefix mask).
 
 ---
 
+## static-updates/
+
+Scripts for maintaining static DNS records that reflect the current state of the network infrastructure. Intended to be
+called from netwatch `on-event` hooks rather than on a fixed schedule.
+ 
+---
+
+### `static-updates/update-dns.rsc`
+
+**Trigger:** Netwatch events for `check-yoba-dns` and `check-boba-dns`
+
+Updates the upstream DNS server used by the hub. Switches to yoba as primary, falls back to boba if yoba is unreachable,
+and falls back to `1.1.1.1` if both are down.
+
+```
+yoba (10.2.248.1) -> boba (10.2.216.1) -> 1.1.1.1
+```
+
+**Setup:** Assign to the `on-event` field of both netwatch entries:
+
+```routeros
+/tool/netwatch/set [find name="check-yoba-dns"] on-event="/system/script/run update-dns"
+/tool/netwatch/set [find name="check-boba-dns"] on-event="/system/script/run update-dns"
+```
+
+---
+
+### `static-updates/update-proxy-cnames.rsc`
+
+**Trigger:** Netwatch events for proxy failover entries
+
+Updates CNAME records for the two regional SOCKS5 proxy endpoints based on node availability:
+
+- `spb.proxy.idlehive` → `peka.idlehive` (primary) or `pepe.idlehive` (fallback)
+- `ams.proxy.idlehive` → `yoba.idlehive` (primary) or `boba.idlehive` (fallback)
+
+**Setup:** Assign to the `on-event` field of the relevant netwatch entries:
+
+```routeros
+/tool/netwatch/set [find name="proxy-failover-peka"] on-event="/system/script/run update-proxy-cnames"
+/tool/netwatch/set [find name="proxy-failover-pepe"] on-event="/system/script/run update-proxy-cnames"
+/tool/netwatch/set [find name="proxy-failover-yoba"] on-event="/system/script/run update-proxy-cnames"
+/tool/netwatch/set [find name="proxy-failover-boba"] on-event="/system/script/run update-proxy-cnames"
+```
+---
+
 ## Scaling to other nodes
 
 All scripts are self-contained and write DNS records locally. To enable DNS registration on additional nodes (e.g. a
