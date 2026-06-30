@@ -1,7 +1,7 @@
 # dns-push-mikrotik
 
-RouterOS scripts that automatically create and remove DNS records for connected clients — DHCP, L2TP/IPsec, IKEv2, and
-WireGuard — using the client name as the hostname.
+RouterOS scripts that automatically create and remove DNS records for connected clients -- DHCP, L2TP/IPsec, IKEv2, and
+WireGuard -- using the client name as the hostname.
 
 ## How it works
 
@@ -13,7 +13,7 @@ whole network.
 
 | Connection type | Hostname                    | Comment tag                   |
 |-----------------|-----------------------------|-------------------------------|
-| DHCP            | `hostname.CHANGE_ME`        | `dhcp-<MAC>`                  |
+| DHCP            | `hostname.CHANGE_ME`        | `<lease-server>-<MAC>`        |
 | L2TP/IPsec      | `username.remote.CHANGE_ME` | `ppp-<username>:<caller-ip>`  |
 | IKEv2           | `username.remote.CHANGE_ME` | `ike-<username>:<remote-ip>`  |
 | WireGuard       | `peername.remote.CHANGE_ME` | `wg-<peername>:<endpoint-ip>` |
@@ -96,9 +96,49 @@ The peer IP is extracted from `allowed-address` (strips the `/32` prefix mask).
 
 ---
 
+### `remote-dns-sync.rsc`
+
+**Trigger:** Scheduler (polling, every 1 minute)
+
+Keeps a spoke node (e.g. a secondary site running its own L2TP/IKEv2/WireGuard endpoints) in sync with the hub's DNS
+table in both directions, over the hub's REST API:
+
+- **Push:** any record on this node tagged `ppp-`, `ike-`, or `wg-` (i.e. created by the scripts above because a client
+  connected directly to this node) is pushed to the hub, overwriting whatever the hub currently has for that hostname.
+  A local connection always wins over a stale hub-side record.
+- **Pull:** anything on the hub that doesn't already exist locally -- DHCP hosts, plain static records, and DNS forwarder
+  (`type=FWD`) records -- is mirrored locally, tagged with a `sync-` prefix so it can be told apart from local-origin
+  records and cleaned up automatically once it's gone from the hub or superseded by a local connection.
+- **Forwarder profiles:** before mirroring any FWD record, the script first syncs `/ip/dns/forwarders` profiles from the
+  hub, since FWD records reference a profile by name and the profile has to exist locally first.
+
+| Origin                              | Local tag               | Mirrored tag (`sync-` prefix) |
+|-------------------------------------|-------------------------|---------------------------------|
+| DHCP                                | `<lease-server>-<MAC>`  | `sync-<lease-server>-<MAC>`     |
+| L2TP/IPsec                          | `ppp-<username>:<ip>`   | `sync-ppp-<username>:<ip>`      |
+| IKEv2                               | `ike-<username>:<ip>`   | `sync-ike-<username>:<ip>`      |
+| WireGuard                           | `wg-<peername>:<ip>`    | `sync-wg-<peername>:<ip>`       |
+| Plain static record (no comment)    | --                       | `sync-static`                   |
+| FWD forwarder record                | --                       | `sync-fwd`                      |
+
+`match-subdomain` is carried over for both plain static and FWD records.
+
+**Setup:** fill in the hub's REST endpoint and credentials at the top of the script, then:
+
+```routeros
+/system/scheduler/add \
+    name=remote-dns-sync \
+    interval=1m \
+    on-event="/system/script/run remote-dns-sync" \
+    start-time=startup
+```
+
+---
+
 ## Scaling to other nodes
 
 All scripts are self-contained and write DNS records locally. To enable DNS registration on additional nodes (e.g. a
 secondary WireGuard or IKEv2 endpoint), deploy the relevant scripts there and add the corresponding scheduler or PPP
 profile hooks. As long as the hub forwards DNS queries to that node, the records will be resolvable network-wide without
-any additional configuration.
+any additional configuration. For nodes that also need to resolve hub-originated records locally (instead of relying on
+DNS forwarding back to the hub), add `remote-dns-sync.rsc` to mirror the hub's table directly.
