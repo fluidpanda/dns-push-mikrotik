@@ -106,20 +106,22 @@ table in both directions, over the hub's REST API:
 - **Push:** any record on this node tagged `ppp-`, `ike-`, or `wg-` (i.e. created by the scripts above because a client
   connected directly to this node) is pushed to the hub, overwriting whatever the hub currently has for that hostname.
   A local connection always wins over a stale hub-side record.
-- **Pull:** anything on the hub that doesn't already exist locally -- DHCP hosts, plain static records, and DNS forwarder
-  (`type=FWD`) records -- is mirrored locally, tagged with a `sync-` prefix so it can be told apart from local-origin
-  records and cleaned up automatically once it's gone from the hub or superseded by a local connection.
+- **Pull:** anything on the hub that doesn't already exist locally -- DHCP hosts, plain static records, CNAME records,
+  and DNS forwarder (`type=FWD`) records -- is mirrored locally, tagged with a `sync-` prefix so it can be told apart
+  from local-origin records and cleaned up automatically once it's gone from the hub or superseded by a local
+  connection.
 - **Forwarder profiles:** before mirroring any FWD record, the script first syncs `/ip/dns/forwarders` profiles from the
   hub, since FWD records reference a profile by name and the profile has to exist locally first.
 
-| Origin                              | Local tag               | Mirrored tag (`sync-` prefix) |
-|-------------------------------------|-------------------------|---------------------------------|
-| DHCP                                | `<lease-server>-<MAC>`  | `sync-<lease-server>-<MAC>`     |
-| L2TP/IPsec                          | `ppp-<username>:<ip>`   | `sync-ppp-<username>:<ip>`      |
-| IKEv2                               | `ike-<username>:<ip>`   | `sync-ike-<username>:<ip>`      |
-| WireGuard                           | `wg-<peername>:<ip>`    | `sync-wg-<peername>:<ip>`       |
-| Plain static record (no comment)    | --                       | `sync-static`                   |
-| FWD forwarder record                | --                       | `sync-fwd`                      |
+| Origin                           | Local tag              | Mirrored tag (`sync-` prefix)   |
+|----------------------------------|------------------------|---------------------------------|
+| DHCP                             | `<lease-server>-<MAC>` | `sync-<lease-server>-<MAC>`     |
+| L2TP/IPsec                       | `ppp-<username>:<ip>`  | `sync-ppp-<username>:<ip>`      |
+| IKEv2                            | `ike-<username>:<ip>`  | `sync-ike-<username>:<ip>`      |
+| WireGuard                        | `wg-<peername>:<ip>`   | `sync-wg-<peername>:<ip>`       |
+| Plain static record (no comment) | --                     | `sync-static`                   |
+| CNAME record                     | --                     | `sync-cname`                    |
+| FWD forwarder record             | --                     | `sync-fwd`                      |
 
 `match-subdomain` is carried over for both plain static and FWD records.
 

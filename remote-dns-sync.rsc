@@ -146,6 +146,38 @@
     }
 }
 
+# Phase 2c: pull CNAME records we don't already have locally
+:foreach frow in=$faceData do={
+    :local fn ($frow->"name")
+    :local ftype ($frow->"type")
+    :local fcname ($frow->"cname")
+    :local fms ($frow->"match-subdomain")
+
+    :if ($ftype = "CNAME") do={
+        :local isLocal false
+        :foreach ln in=$localNames do={
+            :if ($ln = $fn) do={ :set isLocal true }
+        }
+
+        :if (!$isLocal) do={
+            :local syncComment "sync-cname"
+            :local existing [/ip/dns/static/find where name=$fn and comment~"^sync-"]
+
+            :if ([:len $existing] > 0) do={
+                :local curCname [/ip/dns/static/get ($existing->0) cname]
+                :if ($curCname != $fcname) do={
+                    /ip/dns/static/remove $existing
+                    /ip/dns/static/add name=$fn type=CNAME cname=$fcname ttl=$dnsttl match-subdomain=$fms comment=$syncComment
+                    :log info ("remote-dns-sync: updated cname " . $fn . " -> " . $fcname)
+                }
+            } else={
+                /ip/dns/static/add name=$fn type=CNAME cname=$fcname ttl=$dnsttl match-subdomain=$fms comment=$syncComment
+                :log info ("remote-dns-sync: added cname " . $fn . " -> " . $fcname)
+            }
+        }
+    }
+}
+
 # Phase 3: clean up stale sync mirrors (gone from face, or superseded by a local record)
 :foreach rec in=[/ip/dns/static/find where comment~"^sync-"] do={
     :local n [/ip/dns/static/get $rec name]
