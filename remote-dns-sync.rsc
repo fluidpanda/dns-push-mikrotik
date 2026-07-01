@@ -85,7 +85,7 @@
     :local fc ($frow->"comment")
     :local fms ($frow->"match-subdomain")
 
-    :if ($ftype != "FWD") do={
+    :if ($ftype != "FWD" and $ftype != "CNAME") do={
         :local isLocal false
         :foreach ln in=$localNames do={
             :if ($ln = $fn) do={ :set isLocal true }
@@ -94,17 +94,10 @@
         :if (!$isLocal and [:len $fa] > 0) do={
             :local syncComment "sync-static"
             :if ([:len $fc] > 0) do={ :set syncComment ("sync-" . $fc) }
-            :local existing [/ip/dns/static/find where name=$fn and comment~"^sync-"]
 
-            :if ([:len $existing] > 0) do={
-                :local curAddr [/ip/dns/static/get ($existing->0) address]
-                :local curMs [/ip/dns/static/get ($existing->0) match-subdomain]
-                :if ($curAddr != $fa or $curMs != $fms) do={
-                    /ip/dns/static/remove $existing
-                    /ip/dns/static/add name=$fn address=$fa ttl=$dnsttl match-subdomain=$fms comment=$syncComment
-                    :log info ("remote-dns-sync: updated " . $fn . " -> " . $fa)
-                }
-            } else={
+            # Match by name+address pair to support hosts with multiple interfaces
+            :local existing [/ip/dns/static/find where name=$fn and address=$fa and comment~"^sync-"]
+            :if ([:len $existing] = 0) do={
                 /ip/dns/static/add name=$fn address=$fa ttl=$dnsttl match-subdomain=$fms comment=$syncComment
                 :log info ("remote-dns-sync: added " . $fn . " -> " . $fa)
             }
@@ -181,19 +174,29 @@
 # Phase 3: clean up stale sync mirrors (gone from face, or superseded by a local record)
 :foreach rec in=[/ip/dns/static/find where comment~"^sync-"] do={
     :local n [/ip/dns/static/get $rec name]
-
-    :local stillOnFace false
-    :foreach frow in=$faceData do={
-        :if (($frow->"name") = $n) do={ :set stillOnFace true }
-    }
+    :local a [/ip/dns/static/get $rec address]
+    :local c [/ip/dns/static/get $rec comment]
 
     :local nowLocal false
     :foreach ln in=$localNames do={
         :if ($ln = $n) do={ :set nowLocal true }
     }
 
+    :local stillOnFace false
+    :if ($c = "sync-fwd" or $c = "sync-cname") do={
+        # FWD and CNAME: match by name only (no address field)
+        :foreach frow in=$faceData do={
+            :if (($frow->"name") = $n) do={ :set stillOnFace true }
+        }
+    } else={
+        # A-records: match by name+address pair to handle multi-interface hosts
+        :foreach frow in=$faceData do={
+            :if (($frow->"name") = $n and ($frow->"address") = $a) do={ :set stillOnFace true }
+        }
+    }
+
     :if (!$stillOnFace or $nowLocal) do={
         /ip/dns/static/remove $rec
-        :log info ("remote-dns-sync: removed stale sync entry " . $n)
+        :log info ("remote-dns-sync: removed stale sync entry " . $n . " -> " . $a)
     }
 }
