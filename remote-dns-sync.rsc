@@ -3,7 +3,6 @@
 :local faceUser "CHANGE_ME"
 :local facePass "CHANGE_ME"
 :local dnsttl "00:01:00"
-:local pushPrefixes {"ppp-";"ike-";"wg-"}
 
 # Fetch the full list of DNS records from face (single round trip)
 :local faceData
@@ -54,8 +53,12 @@
     :if ([:len $c] < 5 or [:pick $c 0 5] != "sync-") do={
         :set localNames ($localNames , $n)
 
-        :foreach p in=$pushPrefixes do={
-            :if ([:pick $c 0 [:len $p]] = $p) do={
+        :local isPushable false
+        :if ([:pick $c 0 4] = "ppp-" or [:pick $c 0 4] = "ike-" or [:pick $c 0 3] = "wg-") do={
+            :set isPushable true
+        }
+
+        :if ($isPushable) do={
                 :do {
                     :foreach frow in=$faceData do={
                         :if (($frow->"name") = $n) do={
@@ -72,7 +75,6 @@
                 } on-error={
                     :log warning ("remote-dns-sync: push to face failed for " . $n)
                 }
-            }
         }
     }
 }
