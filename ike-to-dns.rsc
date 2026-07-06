@@ -1,4 +1,9 @@
-:local domain ".CHANGE_ME"
+:global remoteDomain
+:if ([:len $remoteDomain] = 0) do={
+    /system/script/run face-config
+}
+
+:local dnsttl "00:01:00"
 :local prefix "ike-"
 
 :foreach lease in=[/ip/pool/used/find where owner="IPsec"] do={
@@ -7,7 +12,7 @@
     :local commaPos [:find $info ", "]
     :local peerExt [:pick $info 0 $commaPos]
     :local peerName [:pick $info ($commaPos + 2) [:len $info]]
-    :local fqdn ($peerName . $domain)
+    :local fqdn ($peerName . $remoteDomain)
     :local tag ($prefix . $peerName)
     :local comment ($tag . ":" . $peerExt)
 
@@ -16,10 +21,10 @@
         :local currentIP [/ip/dns/static/get ($existing->0) address]
         :if ($currentIP != $peerIP) do={
             /ip/dns/static/remove $existing
-            /ip/dns/static/add name=$fqdn address=$peerIP comment=$comment ttl=00:01:00
+            /ip/dns/static/add name=$fqdn address=$peerIP comment=$comment ttl=$dnsttl
         }
     } else={
-        /ip/dns/static/add name=$fqdn address=$peerIP comment=$comment ttl=00:01:00
+        /ip/dns/static/add name=$fqdn address=$peerIP comment=$comment ttl=$dnsttl
     }
 }
 

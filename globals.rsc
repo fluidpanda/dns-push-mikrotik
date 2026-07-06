@@ -1,0 +1,7 @@
+:global domain ".CHANGE_ME"
+:global dhcpDnsTtl "1d 00:00:00"
+:global faceUser "CHANGE_ME"
+:global facePass "CHANGE_ME"
+:global faceUrlDnsStatic "https://CHANGE_ME/rest/ip/dns/static"
+:global faceUrlDnsForwarders "https://CHANGE_ME/rest/ip/dns/forwarders"
+:global remoteDomain "CHANGE_ME.CHANGE_ME"

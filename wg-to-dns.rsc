@@ -1,6 +1,11 @@
-:local domain ".CHANGE_ME"
+:global remoteDomain
+:if ([:len $remoteDomain] = 0) do={
+    /system/script/run face-config
+}
+
 :local prefix "wg-"
 :local threshold 185
+:local dnsttl "00:01:00"
 
 :foreach peer in=[/interface/wireguard/peers/find] do={
     :local peerName [/interface/wireguard/peers/get $peer name]
@@ -9,7 +14,7 @@
     :local peerExt [/interface/wireguard/peers/get $peer current-endpoint-address]
     :local allowedStr [:tostr $allowedAddr]
     :local peerIP [:pick $allowedStr 0 [:find $allowedStr "/"]]
-    :local fqdn ($peerName . $domain)
+    :local fqdn ($peerName . $remoteDomain)
     :local tag ($prefix . $peerName)
     :local comment ($tag . ":" . $peerExt)
 
@@ -17,7 +22,7 @@
 
     :if ($lastHS > 0 and $lastHS < $threshold) do={
         :if ([:len $existing] = 0) do={
-            /ip/dns/static/add name=$fqdn address=$peerIP comment=$comment ttl=00:01:00
+            /ip/dns/static/add name=$fqdn address=$peerIP comment=$comment ttl=$dnsttl
         }
     } else={
         :if ([:len $existing] > 0) do={

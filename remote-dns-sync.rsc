@@ -1,13 +1,17 @@
-:local faceUrl "https://CHANGE_ME/rest/ip/dns/static"
-:local faceFwdUrl "https://CHANGE_ME/rest/ip/dns/forwarders"
-:local faceUser "CHANGE_ME"
-:local facePass "CHANGE_ME"
+:global faceUrlDnsStatic
+:global faceUrlDnsForwarders
+:global faceUser
+:global facePass
+:if ([:len $faceUrlDnsStatic] = 0) do={
+    /system/script/run face-config
+}
+
 :local dnsttl "00:01:00"
 
 # Fetch the full list of DNS records from face (single round trip)
 :local faceData
 :do {
-    :local res [/tool/fetch url=$faceUrl http-method=get user=$faceUser password=$facePass \
+    :local res [/tool/fetch url=$faceUrlDnsStatic http-method=get user=$faceUser password=$facePass \
         check-certificate=yes output=user as-value]
     :set faceData [:deserialize ($res->"data") from=json]
 } on-error={
@@ -19,7 +23,7 @@
 
 # Phase 0: sync forwarder profiles from face (FWD static records reference these by name)
 :do {
-    :local res [/tool/fetch url=$faceFwdUrl http-method=get user=$faceUser password=$facePass \
+    :local res [/tool/fetch url=$faceUrlDnsForwarders http-method=get user=$faceUser password=$facePass \
         check-certificate=yes output=user as-value]
     :local faceFwdData [:deserialize ($res->"data") from=json]
 
@@ -63,11 +67,11 @@
                     :foreach frow in=$faceData do={
                         :if (($frow->"name") = $n) do={
                             :local id ($frow->".id")
-                            /tool/fetch url="$faceUrl/$id" http-method=delete \
+                            /tool/fetch url=($faceUrlDnsStatic . "/" . $id) http-method=delete \
                                 user=$faceUser password=$facePass check-certificate=yes output=none
                         }
                     }
-                    /tool/fetch url=$faceUrl http-method=put check-certificate=yes \
+                    /tool/fetch url=$faceUrlDnsStatic http-method=put check-certificate=yes \
                         http-header-field="Content-Type:application/json" \
                         http-data="{\"name\":\"$n\",\"address\":\"$a\",\"ttl\":\"$dnsttl\",\"comment\":\"$c\"}" \
                         user=$faceUser password=$facePass output=none

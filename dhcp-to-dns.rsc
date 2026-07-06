@@ -1,7 +1,10 @@
-:local dnsttl "1d 00:00:00";
-:local faceUrl "https://CHANGE_ME/rest/ip/dns/static";
-:local faceUser "CHANGE_ME";
-:local facePass "CHANGE_ME";
+:global dhcpDnsTtl;
+:global faceUrlDnsStatic;
+:global faceUser;
+:global facePass;
+:if ([:len $faceUrlDnsStatic] = 0) do={
+    /system/script/run face-config
+}
 
 # "a.b.c.d" -> "a-b-c-d"
 :local ip2Host do={
@@ -91,7 +94,7 @@
 :if ( $leaseBound = 1 ) do={
     # new DHCP lease added
     /ip dhcp-server network
-    #:local dnsttl [get [find name=$leaseServerName ] lease-time]
+    #:local dhcpDnsTtl [get [find name=$leaseServerName ] lease-time]
     :local domain [get [find $leaseActIP in address ] domain]
     #:log info "$LogPrefix: DNS domain is $domain"
 
@@ -120,9 +123,9 @@
         # :log info message="$LogPrefix: $leaseActMAC -> $hostname"
         /ip dns static remove [find comment=$token];
         :do {
-            /ip dns static add address=$leaseActIP name=$fqdn ttl=$dnsttl comment=$token;
-            $faceRemove url=$faceUrl user=$faceUser pass=$facePass token=$token;
-            $faceAdd url=$faceUrl user=$faceUser pass=$facePass fqdn=$fqdn ip=$leaseActIP ttl=$dnsttl token=$token;
+            /ip dns static add address=$leaseActIP name=$fqdn ttl=$dhcpDnsTtl comment=$token;
+            $faceRemove url=$faceUrlDnsStatic user=$faceUser pass=$facePass token=$token;
+            $faceAdd url=$faceUrlDnsStatic user=$faceUser pass=$facePass fqdn=$fqdn ip=$leaseActIP ttl=$dhcpDnsTtl token=$token;
         } on-error={
             :log error message="$LogPrefix: Failure during dns registration of $fqdn with $leaseActIP"
         }
@@ -131,7 +134,7 @@
     :local stillBound [/ip dhcp-server lease find mac-address=$leaseActMAC status=bound server=$leaseServerName]
     :if ([:len $stillBound] = 0) do={
         /ip dns static remove [find comment=$token];
-        $faceRemove url=$faceUrl user=$faceUser pass=$facePass token=$token;
+        $faceRemove url=$faceUrlDnsStatic user=$faceUser pass=$facePass token=$token;
     } else={
         :log info "$LogPrefix: skipping DNS removal, $leaseActMAC still has active lease"
     }
