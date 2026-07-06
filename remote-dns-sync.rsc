@@ -3,7 +3,7 @@
 :global faceUser
 :global facePass
 :if ([:len $faceUrlDnsStatic] = 0) do={
-    /system/script/run face-config
+    /system/script/run globals
 }
 
 :local dnsttl "00:01:00"

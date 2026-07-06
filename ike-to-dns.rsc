@@ -1,6 +1,6 @@
 :global remoteDomain
 :if ([:len $remoteDomain] = 0) do={
-    /system/script/run face-config
+    /system/script/run globals
 }
 
 :local dnsttl "00:01:00"
@@ -12,7 +12,7 @@
     :local commaPos [:find $info ", "]
     :local peerExt [:pick $info 0 $commaPos]
     :local peerName [:pick $info ($commaPos + 2) [:len $info]]
-    :local fqdn ($peerName . $remoteDomain)
+    :local fqdn ($peerName . "." . $remoteDomain)
     :local tag ($prefix . $peerName)
     :local comment ($tag . ":" . $peerExt)
 

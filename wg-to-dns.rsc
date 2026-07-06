@@ -1,6 +1,6 @@
 :global remoteDomain
 :if ([:len $remoteDomain] = 0) do={
-    /system/script/run face-config
+    /system/script/run globals
 }
 
 :local prefix "wg-"
@@ -14,7 +14,7 @@
     :local peerExt [/interface/wireguard/peers/get $peer current-endpoint-address]
     :local allowedStr [:tostr $allowedAddr]
     :local peerIP [:pick $allowedStr 0 [:find $allowedStr "/"]]
-    :local fqdn ($peerName . $remoteDomain)
+    :local fqdn ($peerName . "." . $remoteDomain)
     :local tag ($prefix . $peerName)
     :local comment ($tag . ":" . $peerExt)
 

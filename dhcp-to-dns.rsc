@@ -3,7 +3,7 @@
 :global faceUser;
 :global facePass;
 :if ([:len $faceUrlDnsStatic] = 0) do={
-    /system/script/run face-config
+    /system/script/run globals
 }
 
 # "a.b.c.d" -> "a-b-c-d"

@@ -1,6 +1,6 @@
 :global remoteDomain
 :if ([:len $remoteDomain] = 0) do={
-    /system/script/run face-config
+    /system/script/run globals
 }
 
 :local fqdn ($user . "." . $remoteDomain)
