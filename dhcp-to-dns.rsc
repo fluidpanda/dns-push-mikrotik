@@ -56,7 +56,7 @@
 # params: url, user, pass, fqdn, ip, ttl, token
 :local faceAdd do={
     :do {
-        /tool/fetch url=$url http-method=put check-certificate=no \
+        /tool/fetch url=$url http-method=put check-certificate=yes \
             http-header-field="Content-Type:application/json" \
             http-data="{\"name\":\"$fqdn\",\"address\":\"$ip\",\"ttl\":\"$ttl\",\"comment\":\"$token\"}" \
             user=$user password=$pass output=none;
@@ -69,11 +69,11 @@
 :local faceRemove do={
     :do {
         :local res [/tool/fetch url="$url?comment=$token" http-method=get \
-            user=$user password=$pass check-certificate=no output=user as-value];
+            user=$user password=$pass check-certificate=yes output=user as-value];
         :foreach row in=[:deserialize ($res->"data") from=json] do={
             :local id ($row->".id");
             /tool/fetch url="$url/$id" http-method=delete \
-                user=$user password=$pass check-certificate=no output=none;
+                user=$user password=$pass check-certificate=yes output=none;
             }
     } on-error={
         :log warning "face DNS remove failed: $token"

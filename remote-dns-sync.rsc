@@ -8,7 +8,7 @@
 :local faceData
 :do {
     :local res [/tool/fetch url=$faceUrl http-method=get user=$faceUser password=$facePass \
-        check-certificate=no output=user as-value]
+        check-certificate=yes output=user as-value]
     :set faceData [:deserialize ($res->"data") from=json]
 } on-error={
     :log warning "remote-dns-sync: failed to fetch face dns list, aborting"
@@ -20,7 +20,7 @@
 # Phase 0: sync forwarder profiles from face (FWD static records reference these by name)
 :do {
     :local res [/tool/fetch url=$faceFwdUrl http-method=get user=$faceUser password=$facePass \
-        check-certificate=no output=user as-value]
+        check-certificate=yes output=user as-value]
     :local faceFwdData [:deserialize ($res->"data") from=json]
 
     :foreach frow in=$faceFwdData do={
@@ -64,10 +64,10 @@
                         :if (($frow->"name") = $n) do={
                             :local id ($frow->".id")
                             /tool/fetch url="$faceUrl/$id" http-method=delete \
-                                user=$faceUser password=$facePass check-certificate=no output=none
+                                user=$faceUser password=$facePass check-certificate=yes output=none
                         }
                     }
-                    /tool/fetch url=$faceUrl http-method=put check-certificate=no \
+                    /tool/fetch url=$faceUrl http-method=put check-certificate=yes \
                         http-header-field="Content-Type:application/json" \
                         http-data="{\"name\":\"$n\",\"address\":\"$a\",\"ttl\":\"$dnsttl\",\"comment\":\"$c\"}" \
                         user=$faceUser password=$facePass output=none
