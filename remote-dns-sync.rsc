@@ -63,22 +63,22 @@
         }
 
         :if ($isPushable) do={
-                :do {
-                    :foreach frow in=$faceData do={
-                        :if (($frow->"name") = $n) do={
-                            :local id ($frow->".id")
-                            /tool/fetch url=($faceUrlDnsStatic . "/" . $id) http-method=delete \
-                                user=$faceUser password=$facePass check-certificate=yes output=none
-                        }
+            :do {
+                :foreach frow in=$faceData do={
+                    :if (($frow->"name") = $n) do={
+                        :local id ($frow->".id")
+                        /tool/fetch url=($faceUrlDnsStatic . "/" . $id) http-method=delete \
+                            user=$faceUser password=$facePass check-certificate=yes output=none
                     }
-                    /tool/fetch url=$faceUrlDnsStatic http-method=put check-certificate=yes \
-                        http-header-field="Content-Type:application/json" \
-                        http-data="{\"name\":\"$n\",\"address\":\"$a\",\"ttl\":\"$dnsttl\",\"comment\":\"$c\"}" \
-                        user=$faceUser password=$facePass output=none
-                    :log info ("remote-dns-sync: pushed " . $n . " -> " . $a . " to face")
-                } on-error={
-                    :log warning ("remote-dns-sync: push to face failed for " . $n)
                 }
+                /tool/fetch url=$faceUrlDnsStatic http-method=put check-certificate=yes \
+                    http-header-field="Content-Type:application/json" \
+                    http-data=("{\"name\":\"" . $n . "\",\"address\":\"" . $a . "\",\"ttl\":\"" . $dnsttl . "\",\"comment\":\"" . $c . "\"}") \
+                    user=$faceUser password=$facePass output=none
+                :log info ("remote-dns-sync: pushed " . $n . " -> " . $a . " to face")
+            } on-error={
+                :log warning ("remote-dns-sync: push to face failed for " . $n)
+            }
         }
     }
 }
