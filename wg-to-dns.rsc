@@ -18,7 +18,7 @@
     :local tag ($prefix . $peerName)
     :local comment ($tag . ":" . $peerExt)
 
-    :local existing [/ip/dns/static/find where comment~$tag]
+    :local existing [/ip/dns/static/find where comment~("^" . $tag)]
 
     :if ($lastHS > 0 and $lastHS < $threshold) do={
         :if ([:len $existing] = 0) do={

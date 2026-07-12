@@ -16,7 +16,7 @@
     :local tag ($prefix . $peerName)
     :local comment ($tag . ":" . $peerExt)
 
-    :local existing [/ip/dns/static/find where comment~$tag]
+    :local existing [/ip/dns/static/find where comment~("^" . $tag)]
     :if ([:len $existing] > 0) do={
         :local currentIP [/ip/dns/static/get ($existing->0) address]
         :if ($currentIP != $peerIP) do={
@@ -28,13 +28,16 @@
     }
 }
 
-:foreach rec in=[/ip/dns/static/find where comment~$prefix] do={
+:foreach rec in=[/ip/dns/static/find where comment~("^" . $prefix)] do={
     :local recComment [/ip/dns/static/get $rec comment]
     :local recName [:pick $recComment [:len $prefix] [:find $recComment ":"]]
-    :local active [/ip/pool/used/find where owner="IPsec" info~$recName]
-    :if ([:len $active] = 0) do={
+
+    :local inPool [/ip/pool/used/find where owner="IPsec" info~$recName]
+    :local inActivePeers [/ip/ipsec/active-peers/find where id=$recName state=established]
+
+    :if ([:len $inPool] = 0 and [:len $inActivePeers] = 0) do={
         :local recFqdn [/ip/dns/static/get $rec name]
         /ip/dns/static/remove $rec
-        :log info ("removed: " . $recFqdn)
+        :log info ("ike-to-dns: removed " . $recFqdn)
     }
 }
