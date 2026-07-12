@@ -1,6 +1,7 @@
 :global dhcpDnsTtl
 :global faceHost
 :global faceSshUser
+:global needDhcpToDnsPush
 :if ([:len $faceHost] = 0) do={
     /system/script/run globals
 }
@@ -115,7 +116,9 @@
         /ip dns static remove [find comment=$token];
         :do {
             /ip dns static add address=$leaseActIP name=$fqdn ttl=$dhcpDnsTtl comment=$token;
-            $faceAdd fqdn=$fqdn ip=$leaseActIP ttl=$dhcpDnsTtl token=$token;
+            :if ($needDhcpToDnsPush) do={
+                $faceAdd fqdn=$fqdn ip=$leaseActIP ttl=$dhcpDnsTtl token=$token;
+            }
         } on-error={
             :log error message="$LogPrefix: Failure during dns registration of $fqdn with $leaseActIP"
         }
@@ -124,7 +127,9 @@
     :local stillBound [/ip dhcp-server lease find mac-address=$leaseActMAC status=bound server=$leaseServerName]
     :if ([:len $stillBound] = 0) do={
         /ip dns static remove [find comment=$token];
-        $faceRemove token=$token;
+        :if ($needDhcpToDnsPush) do={
+            $faceRemove token=$token;
+        }
     } else={
         :log info "$LogPrefix: skipping DNS removal, $leaseActMAC still has active lease"
     }
