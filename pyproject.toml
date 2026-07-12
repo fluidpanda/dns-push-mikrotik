@@ -1,0 +1,14 @@
+[project]
+name = "dns-push-mikrotik"
+version = "0.0.1"
+description = "Push scripts to routeros via ssh"
+requires-python = ">=3.14"
+dependencies = [
+    "paramiko>=5.0,<6",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.0",
+    "isort>=6.0",
+]
