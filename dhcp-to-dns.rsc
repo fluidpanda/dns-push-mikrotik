@@ -1,8 +1,7 @@
-:global dhcpDnsTtl;
-:global faceUrlDnsStatic;
-:global faceUser;
-:global facePass;
-:if ([:len $faceUrlDnsStatic] = 0) do={
+:global dhcpDnsTtl
+:global faceHost
+:global faceSshUser
+:if ([:len $faceHost] = 0) do={
     /system/script/run globals
 }
 
@@ -56,28 +55,22 @@
     :return $result;
 }
 
-# params: url, user, pass, fqdn, ip, ttl, token
+# params: fqdn, ip, ttl, token
 :local faceAdd do={
     :do {
-        /tool/fetch url=$url http-method=put check-certificate=yes \
-            http-header-field="Content-Type:application/json" \
-            http-data="{\"name\":\"$fqdn\",\"address\":\"$ip\",\"ttl\":\"$ttl\",\"comment\":\"$token\"}" \
-            user=$user password=$pass output=none;
+        :local cmd ("/ip/dns/static/remove [find comment=" . $token . "]; " . \
+            "/ip/dns/static/add name=" . $fqdn . " address=" . $ip . " ttl=" . $ttl . " comment=" . $token)
+        /system/ssh-exec address=$faceHost user=$faceSshUser command=$cmd
     } on-error={
         :log warning "face DNS add failed: $fqdn"
     }
 }
 
-# params: url, user, pass, token
+# params: token
 :local faceRemove do={
     :do {
-        :local res [/tool/fetch url="$url?comment=$token" http-method=get \
-            user=$user password=$pass check-certificate=yes output=user as-value];
-        :foreach row in=[:deserialize ($res->"data") from=json] do={
-            :local id ($row->".id");
-            /tool/fetch url="$url/$id" http-method=delete \
-                user=$user password=$pass check-certificate=yes output=none;
-            }
+        :local cmd ("/ip/dns/static/remove [find comment=" . $token . "]")
+        /system/ssh-exec address=$faceHost user=$faceSshUser command=$cmd
     } on-error={
         :log warning "face DNS remove failed: $token"
     }
@@ -124,8 +117,7 @@
         /ip dns static remove [find comment=$token];
         :do {
             /ip dns static add address=$leaseActIP name=$fqdn ttl=$dhcpDnsTtl comment=$token;
-            $faceRemove url=$faceUrlDnsStatic user=$faceUser pass=$facePass token=$token;
-            $faceAdd url=$faceUrlDnsStatic user=$faceUser pass=$facePass fqdn=$fqdn ip=$leaseActIP ttl=$dhcpDnsTtl token=$token;
+            $faceAdd fqdn=$fqdn ip=$leaseActIP ttl=$dhcpDnsTtl token=$token;
         } on-error={
             :log error message="$LogPrefix: Failure during dns registration of $fqdn with $leaseActIP"
         }
@@ -134,7 +126,7 @@
     :local stillBound [/ip dhcp-server lease find mac-address=$leaseActMAC status=bound server=$leaseServerName]
     :if ([:len $stillBound] = 0) do={
         /ip dns static remove [find comment=$token];
-        $faceRemove url=$faceUrlDnsStatic user=$faceUser pass=$facePass token=$token;
+        $faceRemove token=$token;
     } else={
         :log info "$LogPrefix: skipping DNS removal, $leaseActMAC still has active lease"
     }

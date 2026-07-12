@@ -1,21 +1,20 @@
-:global faceUrlDnsStatic
-:global faceUrlDnsForwarders
-:global faceUser
-:global facePass
-:if ([:len $faceUrlDnsStatic] = 0) do={
+:global faceHost
+:global faceSshUser
+:if ([:len $faceHost] = 0) do={
     /system/script/run globals
 }
 
 :local dnsttl "00:01:00"
 
-# Fetch the full list of DNS records from face (single round trip)
+# Fetch the full list of DNS static records from face via SSH (single round trip)
 :local faceData
 :do {
-    :local res [/tool/fetch url=$faceUrlDnsStatic http-method=get user=$faceUser password=$facePass \
-        check-certificate=yes output=user as-value]
-    :set faceData [:deserialize ($res->"data") from=json]
+    :local raw ([/system/ssh-exec address=$faceHost user=$faceSshUser \
+        command=":put [:serialize ([/ip/dns/static/print proplist=name,type,address,forward-to,cname,comment,ttl,match-subdomain,disabled as-value]) to=json]" \
+        as-value]->"output")
+    :set faceData [:deserialize $raw from=json]
 } on-error={
-    :log warning "remote-dns-sync: failed to fetch face dns list, aborting"
+    :log warning "remote-dns-sync: failed to fetch face dns list via ssh, aborting"
     :error "face fetch failed"
 }
 
@@ -23,9 +22,10 @@
 
 # Phase 0: sync forwarder profiles from face (FWD static records reference these by name)
 :do {
-    :local res [/tool/fetch url=$faceUrlDnsForwarders http-method=get user=$faceUser password=$facePass \
-        check-certificate=yes output=user as-value]
-    :local faceFwdData [:deserialize ($res->"data") from=json]
+    :local raw ([/system/ssh-exec address=$faceHost user=$faceSshUser \
+        command=":put [:serialize ([/ip/dns/forwarders/print proplist=name,dns-servers as-value]) to=json]" \
+        as-value]->"output")
+    :local faceFwdData [:deserialize $raw from=json]
 
     :foreach frow in=$faceFwdData do={
         :local fname ($frow->"name")
@@ -48,7 +48,8 @@
 }
 
 # Phase 1: collect every local-origin record name (regardless of type), and push
-# remote-client records (ppp-/ike-/wg-) to face since a local connection wins
+# remote-client records (ppp-/ike-/wg-) to face since a local connection wins.
+# Uses a single remote remove+add command per record - no need to look up a face-side .id.
 :foreach rec in=[/ip/dns/static/find] do={
     :local c [/ip/dns/static/get $rec comment]
     :local n [/ip/dns/static/get $rec name]
@@ -64,17 +65,9 @@
 
         :if ($isPushable) do={
             :do {
-                :foreach frow in=$faceData do={
-                    :if (($frow->"name") = $n) do={
-                        :local id ($frow->".id")
-                        /tool/fetch url=($faceUrlDnsStatic . "/" . $id) http-method=delete \
-                            user=$faceUser password=$facePass check-certificate=yes output=none
-                    }
-                }
-                /tool/fetch url=$faceUrlDnsStatic http-method=put check-certificate=yes \
-                    http-header-field="Content-Type:application/json" \
-                    http-data=("{\"name\":\"" . $n . "\",\"address\":\"" . $a . "\",\"ttl\":\"" . $dnsttl . "\",\"comment\":\"" . $c . "\"}") \
-                    user=$faceUser password=$facePass output=none
+                :local cmd ("/ip/dns/static/remove [find name=" . $n . "]; " . \
+                    "/ip/dns/static/add name=" . $n . " address=" . $a . " ttl=" . $dnsttl . " comment=" . $c)
+                /system/ssh-exec address=$faceHost user=$faceSshUser command=$cmd
                 :log info ("remote-dns-sync: pushed " . $n . " -> " . $a . " to face")
             } on-error={
                 :log warning ("remote-dns-sync: push to face failed for " . $n)
