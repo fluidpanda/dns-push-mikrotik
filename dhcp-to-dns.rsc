@@ -57,22 +57,26 @@
 
 # params: fqdn, ip, ttl, token
 :local faceAdd do={
-    :do {
+    :global faceHost
+    :global faceSshUser
+    :onerror e in={
         :local cmd ("/ip/dns/static/remove [find comment=" . $token . "]; " . \
-            "/ip/dns/static/add name=" . $fqdn . " address=" . $ip . " ttl=" . $ttl . " comment=" . $token)
+            "/ip/dns/static/add name=" . $fqdn . " address=" . $ip . " ttl=\"" . $ttl . "\" comment=" . $token)
         /system/ssh-exec address=$faceHost user=$faceSshUser command=$cmd
-    } on-error={
-        :log warning "face DNS add failed: $fqdn"
+    } do={
+        :log warning ("face DNS add failed: " . $fqdn . " - " . $e)
     }
 }
 
 # params: token
 :local faceRemove do={
-    :do {
+    :global faceHost
+    :global faceSshUser
+    :onerror e in={
         :local cmd ("/ip/dns/static/remove [find comment=" . $token . "]")
         /system/ssh-exec address=$faceHost user=$faceSshUser command=$cmd
-    } on-error={
-        :log warning "face DNS remove failed: $token"
+    } do={
+        :log warning ("face DNS remove failed: " . $token . " - " . $e)
     }
 }
 
@@ -87,12 +91,9 @@
 :if ( $leaseBound = 1 ) do={
     # new DHCP lease added
     /ip dhcp-server network
-    #:local dhcpDnsTtl [get [find name=$leaseServerName ] lease-time]
     :local domain [get [find $leaseActIP in address ] domain]
-    #:log info "$LogPrefix: DNS domain is $domain"
 
     :local hostname [/ip dhcp-server lease get [:pick [find mac-address=$leaseActMAC and server=$leaseServerName] 0] value-name=host-name]
-    #:log info "$LogPrefix: DHCP hostname is $hostname"
 
     #Hostname cleanup
     :if ([:len $hostname] <= 0) do={
@@ -102,7 +103,6 @@
 
     :set hostname [$lowerCase entry=$hostname]
     :set hostname [$mapHostName name=$hostname]
-    #:log info "$LogPrefix: Clean hostname for FQDN is $hostname";
 
     :if ([:len $domain] <= 0) do={
         :log warning "$LogPrefix: Empty domainname for '$leaseActIP', cannot create static DNS name"
@@ -110,10 +110,8 @@
     }
 
     :local fqdn ($hostname . "." .  $domain)
-    #:log info "$LogPrefix: FQDN for DNS is $fqdn"
 
     :if ([/ip dhcp-server lease get [:pick [find mac-address=$leaseActMAC and server=$leaseServerName] 0]]) do={
-        # :log info message="$LogPrefix: $leaseActMAC -> $hostname"
         /ip dns static remove [find comment=$token];
         :do {
             /ip dns static add address=$leaseActIP name=$fqdn ttl=$dhcpDnsTtl comment=$token;
