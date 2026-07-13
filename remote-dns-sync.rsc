@@ -196,6 +196,5 @@
 
     :if (!$stillOnFace or $nowLocal) do={
         /ip/dns/static/remove $rec
-        :log info ("remote-dns-sync: removed stale sync entry " . $n . " -> " . $a)
     }
 }
