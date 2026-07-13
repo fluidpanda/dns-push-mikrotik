@@ -36,11 +36,9 @@
             :local curServers [/ip/dns/forwarders/get ($existing->0) dns-servers]
             :if ($curServers != $fservers) do={
                 /ip/dns/forwarders/set ($existing->0) dns-servers=$fservers
-                :log info ("remote-dns-sync: updated forwarder profile " . $fname . " -> " . $fservers)
             }
         } else={
             /ip/dns/forwarders/add name=$fname dns-servers=$fservers
-            :log info ("remote-dns-sync: added forwarder profile " . $fname)
         }
     }
 } on-error={
@@ -68,7 +66,6 @@
                 :local cmd ("/ip/dns/static/remove [find name=" . $n . "]; " . \
                     "/ip/dns/static/add name=" . $n . " address=" . $a . " ttl=" . $dnsttl . " comment=" . $c)
                 /system/ssh-exec address=$faceHost user=$faceSshUser command=$cmd
-                :log info ("remote-dns-sync: pushed " . $n . " -> " . $a . " to face")
             } on-error={
                 :log warning ("remote-dns-sync: push to face failed for " . $n)
             }
@@ -98,7 +95,6 @@
             :local existing [/ip/dns/static/find where name=$fn and address=$fa and comment~"^sync-"]
             :if ([:len $existing] = 0) do={
                 /ip/dns/static/add name=$fn address=$fa ttl=$dnsttl match-subdomain=$fms comment=$syncComment
-                :log info ("remote-dns-sync: added " . $fn . " -> " . $fa)
             }
         }
     }
@@ -128,11 +124,9 @@
                 :if ($curFwd != $ffwd) do={
                     /ip/dns/static/remove $existing
                     /ip/dns/static/add name=$fn type=FWD forward-to=$ffwd match-subdomain=$fms comment=$syncComment
-                    :log info ("remote-dns-sync: updated forwarder " . $fn . " -> " . $ffwd)
                 }
             } else={
                 /ip/dns/static/add name=$fn type=FWD forward-to=$ffwd match-subdomain=$fms comment=$syncComment
-                :log info ("remote-dns-sync: added forwarder " . $fn . " -> " . $ffwd)
             }
         }
     }
@@ -160,11 +154,9 @@
                 :if ($curCname != $fcname) do={
                     /ip/dns/static/remove $existing
                     /ip/dns/static/add name=$fn type=CNAME cname=$fcname ttl=$dnsttl match-subdomain=$fms comment=$syncComment
-                    :log info ("remote-dns-sync: updated cname " . $fn . " -> " . $fcname)
                 }
             } else={
                 /ip/dns/static/add name=$fn type=CNAME cname=$fcname ttl=$dnsttl match-subdomain=$fms comment=$syncComment
-                :log info ("remote-dns-sync: added cname " . $fn . " -> " . $fcname)
             }
         }
     }
