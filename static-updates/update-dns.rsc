@@ -1,12 +1,25 @@
-:local yobaUp ([/tool/netwatch/get [find name="check-yoba-dns"] status] = "up")
-:local bobaUp ([/tool/netwatch/get [find name="check-boba-dns"] status] = "up")
+:local netwatchNames
+:local serverIPs
 
-:if ($yobaUp) do={
-    /ip/dns/set servers=10.2.248.1
-} else={
-    :if ($bobaUp) do={
-        /ip/dns/set servers=10.2.216.1
-    } else={
-        /ip/dns/set servers=1.1.1.1
+:set netwatchNames ($netwatchNames , "check-yoba-dns")
+:set serverIPs ($serverIPs , "10.2.248.1")
+
+:set netwatchNames ($netwatchNames , "check-boba-dns")
+:set serverIPs ($serverIPs , "10.2.216.1")
+
+:local chosen ""
+:local i 0
+:while ($i < [:len $netwatchNames] and $chosen = "") do={
+    :local nwName ($netwatchNames->$i)
+    :local ip ($serverIPs->$i)
+    :if ([/tool/netwatch/get [find name=$nwName] status] = "up") do={
+        :set chosen $ip
     }
+    :set i ($i + 1)
+}
+
+:if ($chosen != "") do={
+    /ip/dns/set servers=$chosen
+} else={
+    /ip/dns/set use-doh-server="https://cloudflare-dns.com/dns-query" verify-doh-cert=yes servers=1.1.1.1
 }
