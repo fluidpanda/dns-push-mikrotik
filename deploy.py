@@ -65,13 +65,13 @@ def deploy_one(
         case True:
             cmd = (
                 f'/system script set [find name="{script_name}"] '
-                f'source=[/file get [find name="{remote_name}"] contents]'
+                f'source=[:tocrlf [/file get [find name="{remote_name}"] contents]]'
             )
         case False:
             cmd = (
                 f'/system script add name="{script_name}" '
                 f"policy={policy} "
-                f'source=[/file get [find name="{remote_name}"] contents]'
+                f'source=[:tocrlf [/file get [find name="{remote_name}"] contents]]'
             )
 
     _, _, stderr = ssh.exec_command(cmd)
