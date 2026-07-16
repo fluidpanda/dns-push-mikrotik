@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import io
 from pathlib import Path
 
 import paramiko
@@ -35,6 +36,11 @@ def script_exists(ssh: paramiko.SSHClient, name: str) -> bool:
     return result not in ("", "0")
 
 
+def to_lf(raw: bytes) -> bytes:
+    """Normalize line endings to LF"""
+    return raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def deploy_one(
     ssh: paramiko.SSHClient,
     sftp: paramiko.SFTPClient,
@@ -49,8 +55,8 @@ def deploy_one(
 
     print(f"-> {path.relative_to(repo_dir)}  =>  {script_name}")
 
-    # upload the raw file so RouterOS can read its contents natively
-    sftp.put(str(path), remote_name)
+    content = to_lf(path.read_bytes())
+    sftp.putfo(io.BytesIO(content), remote_name)
 
     exists = script_exists(ssh, script_name)
 
