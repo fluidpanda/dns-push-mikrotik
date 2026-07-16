@@ -19,7 +19,7 @@
 }
 
 :if ($chosen != "") do={
-    /ip/dns/set servers=$chosen
+    /ip/dns/set servers=$chosen use-doh-server=""
 } else={
     /ip/dns/set use-doh-server="https://cloudflare-dns.com/dns-query" verify-doh-cert=yes servers=1.1.1.1
 }
