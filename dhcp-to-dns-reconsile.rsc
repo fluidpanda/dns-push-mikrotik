@@ -8,7 +8,7 @@
     /system/script/run globals
 }
 :if ([:typeof $dhcpDnsPushed] = "nothing") do={
-    :set dhcpDnsPushed {}
+    :set dhcpDnsPushed [:toarray ""]
 }
 
 :if ($needDhcpToDnsPush) do={
@@ -49,7 +49,7 @@
     }
 
     :local pendingCmd ""
-    :local pendingIps {}
+    :local pendingIps [:toarray ""]
     :local pendingCount 0
 
     :foreach lease in=[/ip dhcp-server lease find status="bound"] do={
