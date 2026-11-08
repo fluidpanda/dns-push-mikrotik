@@ -78,14 +78,18 @@
     }
 
     :if ($pendingCount > 0) do={
-        :do {
-            /system/ssh-exec address=$faceHost user=$faceSshUser command=$pendingCmd
+        :onerror err in={
+            :local res [/system/ssh-exec address=$faceHost user=$faceSshUser command=$pendingCmd as-value]
+            :if (($res->"exit-code") != 0) do={
+                :error ("remote exit-code " . ($res->"exit-code") . ": " . ($res->"output"))
+            }
             :foreach token,ip in=$pendingIps do={
                 :set ($dhcpDnsPushed->$token) $ip
             }
             :log info ("dhcp-to-dns-reconcile: pushed " . $pendingCount . " record(s) to face")
-        } on-error={
-            :log warning "dhcp-to-dns-reconcile: batch push to face failed, will retry next run"
+        } do={
+            :log warning ("dhcp-to-dns-reconcile: batch push to face failed: " . $err)
+            :log warning ("dhcp-to-dns-reconcile: cmd was: " . $pendingCmd)
         }
     }
 }
